@@ -1,5 +1,5 @@
 Title: Dynamic Akka Streams Using Stage Actors
-Date: 2015-05-15 17:20
+Date: 2016-05-15 17:20
 Category: Programming
 Tags: Akka, Actors, Scala
 
@@ -77,7 +77,7 @@ class TagStage(stageCoordinator: ActorRef, initialKeywordsMap: Map[String, Set[S
   }
 }
 ```
- 
+
 
 The coordinator actor just needs to store the references to the registered stage actors and forward any received messages to them.
 
@@ -203,4 +203,4 @@ class TagStageTest(_system: ActorSystem) extends TestKit(_system) with ImplicitS
 ```
 
 
-Source code for the project can be found [here](https://github.com/charithe/akka-stage-actor) 
+Source code for the project can be found [here](https://github.com/charithe/akka-stage-actor)

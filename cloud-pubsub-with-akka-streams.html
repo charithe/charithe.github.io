@@ -4,11 +4,11 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="Lucid Electric Dreams, ">
-        <meta name="keywords" content="">
+        <meta name="description" content="I finally managed to open-source the Cloud Pub/Sub Akka Streams components I wrote for the &#34;Manifold&#34; project at work (more details on that project will be published soon). These components have ...">
+        <meta name="keywords" content="Akka, Google Cloud, Scala">
         <link rel="icon" href="http://charithe.github.io/favicon.ico">
 
-        <title>Homepage - Lucid Electric Dreams</title>
+        <title>Cloud Pub/Sub With Akka Streams - Lucid Electric Dreams</title>
 
         <!-- Stylesheets -->
         <link href="http://charithe.github.io/theme/css/all.min.css" rel="stylesheet">
@@ -16,6 +16,7 @@
 
         <!-- RSS Feeds -->
         <link href="http://charithe.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Lucid Electric Dreams Full Atom Feed" />
+        <link href="http://charithe.github.io/feeds/programming.atom.xml" type="application/atom+xml" rel="alternate" title="Lucid Electric Dreams Categories Atom Feed" />
         <!-- /RSS Feeds -->
 
         <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -48,16 +49,23 @@
             <!-- /Static navbar -->
 
             <!-- Header -->
+    <!-- Header -->
     <div class="container header-wrapper">
         <div class="row">
               <div class="col-lg-12">
                   <div class="header-content">
-                      <h1 class="header-title">CEll's brain dumps</h1>
+                      <h1 class="header-title">Cloud Pub/Sub With Akka Streams</h1>
+                      <p class="header-date"> <a href="http://charithe.github.io/author/cell.html">CEll</a>, Wed 30 November 2016,  <a href="http://charithe.github.io/category/programming.html">Programming</a></p>
                       <div class="header-underline"></div>
+                      <div class="clearfix"></div>
+                      <p class="pull-right header-tags">
+                          <span class="glyphicon glyphicon-tags mr5" aria-hidden="true"></span>
+<a href="http://charithe.github.io/tag/akka.html">Akka</a>, <a href="http://charithe.github.io/tag/google-cloud.html">Google Cloud</a>, <a href="http://charithe.github.io/tag/scala.html">Scala</a>                      </p>
                   </div>
               </div>
         </div>
     </div>
+    <!-- /Header -->
             <!-- /Header -->
 
         </div>
@@ -65,21 +73,12 @@
 
 
         <!-- Content -->
-    
-    <div class="archive-container">
-        <div class="container content archive">
-            <h2><a href="http://charithe.github.io/index.html">Recent Posts </a></h2>
-            <dl class="dl-horizontal">
-                <dt>Wed 30 November 2016</dt>
-                <dd><a href="http://charithe.github.io/cloud-pubsub-with-akka-streams.html">Cloud Pub/Sub With Akka Streams</a></dd>
-                <dt>Wed 20 July 2016</dt>
-                <dd><a href="http://charithe.github.io/grpc-pool-for-groupcache.html">gRPC pool for groupcache</a></dd>
-                <dt>Tue 17 May 2016</dt>
-                <dd><a href="http://charithe.github.io/akka-cluster-on-kubernetes.html">Akka Cluster On Kubernetes</a></dd>
-                <dt>Sun 15 May 2016</dt>
-                <dd><a href="http://charithe.github.io/dynamic-akka-streams-using-stage-actors.html">Dynamic Akka Streams Using Stage Actors</a></dd>
-            </dl>
-        </div>
+    <div class="container content">
+        <p>I finally managed to open-source the Cloud Pub/Sub Akka Streams components I wrote for the "Manifold" project at work (more details on that project will be published soon). These components have been in production for several months and is used to process a Cloud Pub/Sub firehose that streams over a billion events a day.</p>
+<p>Artifacts will be published to Maven Central soon. In the mean time, check out the sources from <a href="https://github.com/QubitProducts/akka-cloudpubsub">https://github.com/QubitProducts/akka-cloudpubsub</a> and build locally with <code>sbt publishLocal</code>.</p>
+
+
+        
     </div>
         <!-- /Content --> 
 

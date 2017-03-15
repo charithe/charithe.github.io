@@ -43,7 +43,7 @@ NEST_SITEMAP_COLUMN_TITLE = u'Sitemap'
 NEST_SITEMAP_MENU = [('Archives', '/archives.html'),('Tags','/tags.html')]
 NEST_SITEMAP_ATOM_LINK = u'Atom Feed'
 NEST_SITEMAP_RSS_LINK = u'RSS Feed'
-NEST_COPYRIGHT = u'&copy; 2016  Charith Ellawala '
+NEST_COPYRIGHT = u'&copy; 2016-2017  Charith Ellawala '
 # index.html
 # index.html
 NEST_INDEX_HEAD_TITLE = u'Homepage'

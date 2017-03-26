@@ -1,5 +1,176 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Lucid Electric Dreams</title><link href="http://charithe.github.io/" rel="alternate"></link><link href="http://charithe.github.io/feeds/programming.atom.xml" rel="self"></link><id>http://charithe.github.io/</id><updated>2017-03-15T20:28:00+00:00</updated><entry><title>Protocol Buffers and gRPC Tips for Go</title><link href="http://charithe.github.io/protocol-buffers-and-grpc-tips-for-go.html" rel="alternate"></link><published>2017-03-15T20:28:00+00:00</published><author><name>CEll</name></author><id>tag:charithe.github.io,2017-03-15:protocol-buffers-and-grpc-tips-for-go.html</id><summary type="html">&lt;p&gt;This is a brain dump of tools and code snippets that come in handy when implementing gRPC services or using protobufs with Go.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Lucid Electric Dreams</title><link href="http://charithe.github.io/" rel="alternate"></link><link href="http://charithe.github.io/feeds/programming.atom.xml" rel="self"></link><id>http://charithe.github.io/</id><updated>2017-03-26T16:08:00+01:00</updated><entry><title>Tracing gRPC Services In Go</title><link href="http://charithe.github.io/tracing-grpc-services-in-go.html" rel="alternate"></link><published>2017-03-26T16:08:00+01:00</published><author><name>CEll</name></author><id>tag:charithe.github.io,2017-03-26:tracing-grpc-services-in-go.html</id><summary type="html">&lt;h2&gt;Built-in tracing with x/net/trace&lt;/h2&gt;
+&lt;p&gt;The &lt;code&gt;grpc&lt;/code&gt; package contains a variable named &lt;code&gt;EnableTracing&lt;/code&gt; that is set to true by default. When tracing is enabled, 
+all requests and responses are recorded internally by the grpc library using the trace functions provided by the 
+&lt;code&gt;x/net/trace&lt;/code&gt; package. This package registers two HTTP handlers in &lt;code&gt;http.DefaultServeMux&lt;/code&gt; to serve trace information at 
+&lt;code&gt;/debug/events&lt;/code&gt; and &lt;code&gt;/debug/requests&lt;/code&gt; paths by default. Alternatively, &lt;code&gt;trace.Render(...)&lt;/code&gt; and &lt;code&gt;trace.RenderEvents(...)&lt;/code&gt; 
+can be used in your own HTTP handlers to produce the same output.&lt;/p&gt;
+&lt;p&gt;At the time of writing, the &lt;code&gt;trace&lt;/code&gt; package does not have have a persistence mechanism and the rendered information is 
+a "live" view of traces held in memory. This makes it unsuitable for after-the-fact analysis.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;quot;http&amp;quot;&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;quot;google.golang.org/grpc&amp;quot;&lt;/span&gt;
+    &lt;span class="nx"&gt;_&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;golang.org/x/net/trace&amp;quot;&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;init&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;EnableTracing&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;startGRPCServer&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;// start the gRPC server&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;startDebugServer&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;// Start the default http server and explicitly bind it to listen on localhost for security purposes&lt;/span&gt;
+    &lt;span class="c1"&gt;// Accessing http://localhost:6060/debug/events or http://localhost:6060/debug/requests will show the&lt;/span&gt;
+    &lt;span class="c1"&gt;// currently gathered traces.&lt;/span&gt;
+    &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ListenAndServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;localhost:6060&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; 
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Dapper style distributed tracing&lt;/h2&gt;
+&lt;p&gt;There are several distributed tracing systems modelled after Google Dapper such as Zipkin, Jaeger, Stackdriver Trace etc.
+&lt;a href="https://opentracing.io"&gt;Opentracing&lt;/a&gt; is a vendor-neutral tracing implementation that supports multiple collector backends. 
+The Go implementation of the Opentracing API can be found at &lt;a href="https://github.com/opentracing/opentracing-go"&gt;https://github.com/opentracing/opentracing-go&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The most obvious way to add trace information to gRPC invocations is to make use of server and client interceptors. Indeed, 
+this is how the &lt;a href="https://github.com/grpc-ecosystem/grpc-opentracing"&gt;grpc-opentracing&lt;/a&gt; library works. The client interceptor 
+extracts the tracing information from the call context and adds it to the remote call as gRPC metadata. The server interceptor 
+then extracts the tracing information from gRPC metadata and adds it to the call context on the server side. Unfortunately, 
+this method only works flawlessy for unary RPCs. If you have any streaming RPCs, the current &lt;code&gt;ServerStreamInterceptor&lt;/code&gt; does not
+permit modification of the stream context and your trace data will be inaccurate. One way to work around this is to wrap the 
+server stream and the new context in a new &lt;code&gt;ServerStream&lt;/code&gt; as follows.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt; &lt;span class="kd"&gt;struct&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;stream&lt;/span&gt; &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ServerStream&lt;/span&gt;
+    &lt;span class="nx"&gt;ctx&lt;/span&gt;    &lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;WrapServerStream&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt; &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ServerStream&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;ctx&lt;/span&gt; &lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;SetHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt; &lt;span class="nx"&gt;metadata&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MD&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;SetHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;SendHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt; &lt;span class="nx"&gt;metadata&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MD&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;SendHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;SetTrailer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt; &lt;span class="nx"&gt;metadata&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MD&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;SetTrailer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;md&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;SendMsg&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;m&lt;/span&gt; &lt;span class="kd"&gt;interface&lt;/span&gt;&lt;span class="p"&gt;{})&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;SendMsg&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;m&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ssw&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;ServerStreamWrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;RecvMsg&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;m&lt;/span&gt; &lt;span class="kd"&gt;interface&lt;/span&gt;&lt;span class="p"&gt;{})&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;ssw&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;stream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RecvMsg&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;m&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;While this allows us to work around the immutable context in server streams, there are a few problems with this approach:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;There must be a good reason for why the gRPC developers have made server stream context unmodifiable&lt;/li&gt;
+&lt;li&gt;If the gRPC &lt;code&gt;ServerStream&lt;/code&gt; interface changes in the future, our code will break&lt;/li&gt;
+&lt;li&gt;Even if the context modification problem is solved, we still do not have a mechanism to detect when the stream ends&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The full source code of my attempt to use interceptors for tracing can be found here: &lt;a href="https://gist.github.com/charithe/b5956620fa6bb0caf668f857d70a5fc4"&gt;https://gist.github.com/charithe/b5956620fa6bb0caf668f857d70a5fc4&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Given the library limitations and the fact that streams can be live for quite long periods of time, attempting to trace them
+might be inadvisable. However, I wanted to see if it was possible to do so, and the unorthodox solution I stumbled on to was to use
+the &lt;code&gt;stats.Handler&lt;/code&gt; interface now available in the gRPC package. This interface conveniently provides hooks into all the
+interesting events that happen during the execution of a gRPC invocation, and can be harnessed to add instrumentation for tracing 
+purposes. My implementation of this idea can be found at &lt;a href="https://github.com/charithe/otgrpc"&gt;https://github.com/charithe/otgrpc&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;One of the issues I came across while implementing the library is that for client-only streams, the end of the stream is not
+detected unless an error occurs. I have submitted a &lt;a href="https://github.com/grpc/grpc-go/pull/1140"&gt;pull request to the gRPC project&lt;/a&gt; to fix this issue, and if it gets merged-in,
+full tracing of both unary and streaming RPCs will become posible.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// Server side&lt;/span&gt;
+
+&lt;span class="nx"&gt;th&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;otgrpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewTraceHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;tracer&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;otgrpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;WithPayloadLogging&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;span class="nx"&gt;server&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;StatsHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;th&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="c1"&gt;// register gRPC services and start the server&lt;/span&gt;
+
+
+&lt;span class="c1"&gt;// Client side&lt;/span&gt;
+
+&lt;span class="nx"&gt;th&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;otgrpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewTraceHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;tracer&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;otgrpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;WithPayloadLogging&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;span class="nx"&gt;conn&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Dial&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;grpc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;WithStatsHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;th&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="c1"&gt;// create client from the connection&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;A race session on a bi-directional stream, captured using &lt;code&gt;opentracing.MockTracer&lt;/code&gt; looks as follows:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;traceId=61, spanId=66, parentId=64, sampled=true, name=/test.TestSvc/BidiStreamRPC
+    [map[component:gRPC span.kind:server]]
+    2017-03-26 17:47:25.735035236 +0100 BST {Key:event ValueKind:string ValueString:Header received: Remote addr=@, Local addr=/tmp/testsvc}
+    2017-03-26 17:47:25.735063884 +0100 BST {Key:event ValueKind:string ValueString:RPC started}
+    2017-03-26 17:47:25.735071278 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735071278 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping0&amp;quot; }
+    2017-03-26 17:47:25.73508489 +0100 BST {Key:event ValueKind:string ValueString:Header sent: Remote addr=%!s(&amp;lt;nil&amp;gt;), Local addr=%!s(&amp;lt;nil&amp;gt;)}
+    2017-03-26 17:47:25.73508987 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.73508987 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping0&amp;quot; }
+    2017-03-26 17:47:25.735143788 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735143788 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping1&amp;quot; }
+    2017-03-26 17:47:25.735152847 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735152847 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping1&amp;quot; }
+    2017-03-26 17:47:25.735187024 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735187024 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping2&amp;quot; }
+    2017-03-26 17:47:25.735194692 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735194692 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping2&amp;quot; }
+    2017-03-26 17:47:25.735232775 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735232775 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping3&amp;quot; }
+    2017-03-26 17:47:25.735245634 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735245634 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping3&amp;quot; }
+    2017-03-26 17:47:25.735303342 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735303342 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping4&amp;quot; }
+    2017-03-26 17:47:25.735320488 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735320488 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping4&amp;quot; }
+    2017-03-26 17:47:25.735357374 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=9}
+    2017-03-26 17:47:25.735357374 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;OK&amp;quot; }
+    2017-03-26 17:47:25.735371044 +0100 BST {Key:event ValueKind:string ValueString:Trailer sent}
+    2017-03-26 17:47:25.735375683 +0100 BST {Key:event ValueKind:string ValueString:RPC ended}
+
+
+traceId=61, spanId=64, parentId=62, sampled=true, name=/test.TestSvc/BidiStreamRPC
+    [map[component:gRPC span.kind:client]]
+    2017-03-26 17:47:25.734969911 +0100 BST {Key:event ValueKind:string ValueString:RPC started}
+    2017-03-26 17:47:25.73499256 +0100 BST {Key:event ValueKind:string ValueString:Header sent: Remote addr=/tmp/testsvc, Local addr=@}
+    2017-03-26 17:47:25.735003708 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735003708 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping0&amp;quot; }
+    2017-03-26 17:47:25.735095398 +0100 BST {Key:event ValueKind:string ValueString:Header received: Remote addr=%!s(&amp;lt;nil&amp;gt;), Local addr=%!s(&amp;lt;nil&amp;gt;)}
+    2017-03-26 17:47:25.73511693 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.73511693 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping0&amp;quot; }
+    2017-03-26 17:47:25.735134045 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735134045 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping1&amp;quot; }
+    2017-03-26 17:47:25.735166036 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735166036 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping1&amp;quot; }
+    2017-03-26 17:47:25.735176586 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735176586 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping2&amp;quot; }
+    2017-03-26 17:47:25.735207855 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735207855 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping2&amp;quot; }
+    2017-03-26 17:47:25.735220191 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735220191 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping3&amp;quot; }
+    2017-03-26 17:47:25.735265907 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735265907 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping3&amp;quot; }
+    2017-03-26 17:47:25.735283455 +0100 BST {Key:event ValueKind:string ValueString:Payload sent: Wire length=12}
+    2017-03-26 17:47:25.735283455 +0100 BST {Key:payload ValueKind:ptr ValueString:request:&amp;quot;ping4&amp;quot; }
+    2017-03-26 17:47:25.735331558 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=7}
+    2017-03-26 17:47:25.735331558 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;ping4&amp;quot; }
+    2017-03-26 17:47:25.735365117 +0100 BST {Key:event ValueKind:string ValueString:Payload received: Wire length=4}
+    2017-03-26 17:47:25.735365117 +0100 BST {Key:payload ValueKind:ptr ValueString:response:&amp;quot;OK&amp;quot; }
+    2017-03-26 17:47:25.735377619 +0100 BST {Key:event ValueKind:string ValueString:Trailer received}
+    2017-03-26 17:47:25.735394863 +0100 BST {Key:event ValueKind:string ValueString:RPC ended}
+
+
+traceId=61, spanId=62, parentId=0, sampled=true, name=grpc_op
+&lt;/pre&gt;&lt;/div&gt;</summary><category term="Go"></category><category term="gRPC"></category><category term="Tracing"></category><category term="Monitoring"></category></entry><entry><title>Protocol Buffers and gRPC Tips for Go</title><link href="http://charithe.github.io/protocol-buffers-and-grpc-tips-for-go.html" rel="alternate"></link><published>2017-03-15T20:28:00+00:00</published><author><name>CEll</name></author><id>tag:charithe.github.io,2017-03-15:protocol-buffers-and-grpc-tips-for-go.html</id><summary type="html">&lt;p&gt;This is a brain dump of tools and code snippets that come in handy when implementing gRPC services or using protobufs with Go.&lt;/p&gt;
 &lt;h2&gt;Libraries And Utilities&lt;/h2&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cat &lt;span class="s"&gt;&amp;lt;&amp;lt;EOF | xargs go get -u&lt;/span&gt;
 &lt;span class="s"&gt;github.com/golang/protobuf/proto&lt;/span&gt;

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>observability on Ultracrepidarian</title>
+    <link>/tags/observability/</link>
+    <description>Recent content in observability on Ultracrepidarian</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sun, 26 Mar 2017 14:23:24 +0100</lastBuildDate><atom:link href="/tags/observability/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tracing gRPC Services</title>
+      <link>/posts/tracing-grpc-services/</link>
+      <pubDate>Sun, 26 Mar 2017 14:23:24 +0100</pubDate>
+      
+      <guid>/posts/tracing-grpc-services/</guid>
+      <description>Built-in tracing with x/net/trace The grpc package contains a variable named EnableTracing that is set to true by default. When tracing is enabled, all requests and responses are recorded internally by the grpc library using the trace functions provided by the x/net/trace package. This package registers two HTTP handlers in http.DefaultServeMux to serve trace information at /debug/events and /debug/requests paths by default. Alternatively, trace.Render(...) and trace.RenderEvents(...) can be used in your own HTTP handlers to produce the same output.</description>
+    </item>
+    
+    <item>
+      <title>Integrating Hystrix And Exposing Metrics To Prometheus</title>
+      <link>/posts/hystrix-prom/</link>
+      <pubDate>Mon, 09 Jan 2017 18:08:22 +0100</pubDate>
+      
+      <guid>/posts/hystrix-prom/</guid>
+      <description>Hystrix is a well-known fault tolerance library for distributed systems. If your application needs to interact with remote systems (or even micro-services running in the same data center), Hystrix will provide latency-sensitive routing, retries, request coalescing, circuit breakers and many more fault-tolerance features out of the box. I cannot do much justice to Hystrix in this short brain dump but there are many great articles and presentations around the web that are well worth perusing.</description>
+    </item>
+    
+  </channel>
+</rss>

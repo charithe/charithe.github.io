@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en-gb">
+  <head>
+    <title>Integrating Hystrix And Exposing Metrics To Prometheus // Ultracrepidarian</title>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Hugo 0.76.5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Charith Ellawala" />
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="/css/main.min.88e7083eff65effb7485b6e6f38d10afbec25093a6fac42d734ce9024d3defbd.css" />
+
+    
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Integrating Hystrix And Exposing Metrics To Prometheus"/>
+<meta name="twitter:description" content="Hystrix is a well-known fault tolerance library for distributed systems. If your application needs to interact with remote systems (or even micro-services running in the same data center), Hystrix will provide latency-sensitive routing, retries, request coalescing, circuit breakers and many more fault-tolerance features out of the box. I cannot do much justice to Hystrix in this short brain dump but there are many great articles and presentations around the web that are well worth perusing."/>
+
+    <meta property="og:title" content="Integrating Hystrix And Exposing Metrics To Prometheus" />
+<meta property="og:description" content="Hystrix is a well-known fault tolerance library for distributed systems. If your application needs to interact with remote systems (or even micro-services running in the same data center), Hystrix will provide latency-sensitive routing, retries, request coalescing, circuit breakers and many more fault-tolerance features out of the box. I cannot do much justice to Hystrix in this short brain dump but there are many great articles and presentations around the web that are well worth perusing." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/posts/hystrix-prom/" />
+<meta property="article:published_time" content="2017-01-09T18:08:22+01:00" />
+<meta property="article:modified_time" content="2017-01-09T18:08:22+01:00" />
+
+
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="/"><img class="app-header-avatar" src="/images/profile_pic.jpg" alt="Charith Ellawala" /></a>
+      <h1>Ultracrepidarian</h1>
+      <nav class="app-header-menu">
+          <a class="app-header-menu-item" href="/">Home</a>
+             | 
+          
+          <a class="app-header-menu-item" href="/tags/">Tags</a>
+      </nav>
+      <p>Musings</p>
+      <div class="app-header-social">
+        
+          <a target="_blank" href="https://github.com/charithe" rel="noreferrer noopener"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-github">
+  <title>github</title>
+  <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+</svg></a>
+        
+      </div>
+    </header>
+    <main class="app-container">
+      
+  <article class="post">
+    <header class="post-header">
+      <h1 class ="post-title">Integrating Hystrix And Exposing Metrics To Prometheus</h1>
+      <div class="post-meta">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-calendar">
+  <title>calendar</title>
+  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+</svg>
+          Jan 9, 2017
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-clock">
+  <title>clock</title>
+  <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+</svg>
+          3 min read
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
+  <title>tag</title>
+  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line>
+</svg>
+              <a class="tag" href="/tags/java/">java</a>
+              <a class="tag" href="/tags/hystrix/">hystrix</a>
+              <a class="tag" href="/tags/prometheus/">prometheus</a>
+              <a class="tag" href="/tags/observability/">observability</a>
+        </div>
+      </div>
+    </header>
+    <div class="post-content">
+      <p><a href="https://github.com/Netflix/Hystrix">Hystrix</a> is a well-known fault tolerance library for distributed systems. If your
+application needs to interact with remote systems (or even micro-services running in the same data center), Hystrix will
+provide latency-sensitive routing, retries, request coalescing, circuit breakers and many more fault-tolerance features out of the box.
+I cannot do much justice to Hystrix in this short brain dump but there are many great articles and presentations around the web that
+are well worth perusing.</p>
+<p>Integrating Hystrix into an application can be a bit cumbersome as every external interaction needs to be defined as a Hystrix command.
+One method I have successfully used to reduce the amount of integration code is to write a wrapper class.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.netflix.hystrix.HystrixCommand<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> com.netflix.hystrix.HystrixCommandGroupKey<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> com.netflix.hystrix.HystrixCommandKey<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> rx.Single<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> java.util.function.Supplier<span style="color:#f92672">;</span>
+
+<span style="color:#75715e">// This assumes that your code is already written using RxJava. Hystrix also provides methods for wrapping the result
+</span><span style="color:#75715e">// as an Observable as well
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CommandWrapper</span><span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> HystrixCommand<span style="color:#f92672">&lt;</span>Single<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// if there are multiple logically related commands, this should be made into a parameter as well 
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String COMMAND_GROUP_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;MyCommandGroup&#34;</span><span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Supplier<span style="color:#f92672">&lt;</span>Single<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;&gt;</span> wrappedFn<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> String commandKey<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> CommandWrapper<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">of</span><span style="color:#f92672">(</span>String commandKey<span style="color:#f92672">,</span> Supplier<span style="color:#f92672">&lt;</span>Single<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;&gt;</span> wrappedFn<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> CommandWrapper<span style="color:#f92672">&lt;&gt;(</span>commandKey<span style="color:#f92672">,</span> wrappedFn<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    CommandWrapper<span style="color:#f92672">(</span>String commandKey<span style="color:#f92672">,</span> Supplier<span style="color:#f92672">&lt;</span>Single<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;&gt;</span> wrappedFn<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>Setter<span style="color:#f92672">.</span><span style="color:#a6e22e">withGroupKey</span><span style="color:#f92672">(</span>HystrixCommandGroupKey<span style="color:#f92672">.</span><span style="color:#a6e22e">Factory</span><span style="color:#f92672">.</span><span style="color:#a6e22e">asKey</span><span style="color:#f92672">(</span>COMMAND_GROUP_KEY<span style="color:#f92672">))</span>
+                  <span style="color:#f92672">.</span><span style="color:#a6e22e">andCommandKey</span><span style="color:#f92672">(</span>HystrixCommandKey<span style="color:#f92672">.</span><span style="color:#a6e22e">Factory</span><span style="color:#f92672">.</span><span style="color:#a6e22e">asKey</span><span style="color:#f92672">(</span>commandKey<span style="color:#f92672">)));</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">commandKey</span> <span style="color:#f92672">=</span> commandKey<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">wrappedFn</span> <span style="color:#f92672">=</span> wrappedFn<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">protected</span> Single<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> wrappedFn<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#a6e22e">@Override</span>
+    <span style="color:#66d9ef">public</span> HystrixCommandKey <span style="color:#a6e22e">getCommandKey</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> HystrixCommandKey<span style="color:#f92672">.</span><span style="color:#a6e22e">Factory</span><span style="color:#f92672">.</span><span style="color:#a6e22e">asKey</span><span style="color:#f92672">(</span>commandKey<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>The above wrapper allows your core logic to be written without worrying about Hystrix and yet reap its' benefits  as follows:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Single<span style="color:#f92672">&lt;</span>ApiToken<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">login</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> CommandWrapper<span style="color:#f92672">.</span><span style="color:#a6e22e">of</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;LoginToSystemX&#34;</span><span style="color:#f92672">,</span> client<span style="color:#f92672">::</span>login<span style="color:#f92672">).</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">();</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="prometheus-reporting-and-hystrix-dashboard">Prometheus Reporting And Hystrix Dashboard</h2>
+<p>Hystrix provides a comprehensive set of metrics that can be viewed live using the <a href="https://github.com/Netflix/Hystrix/tree/master/hystrix-dashboard">Hystrix Dashboard</a> or collected using metrics backends such as Netflix Servo. The Hystrix distribution provides a Servlet handler for these integrations but what if the application is not running inside a servlet container and the preferred metrics backend is <a href="https://prometheus.io/">Prometheus</a>.</p>
+<p>Two open-source projects come to our rescue here.</p>
+<ul>
+<li><a href="https://github.com/Netflix/Hystrix/tree/master/hystrix-contrib/hystrix-rx-netty-metrics-stream">Hystrix RxNetty Metrics Stream</a></li>
+<li><a href="https://github.com/soundcloud/prometheus-hystrix">SoundCloud&rsquo;s Prometheus-Hystrix</a></li>
+</ul>
+<p>Unfortunately, SoundCloud <code>prometheus-hystrix</code> library is not released on Maven Central at the time of writing. You can instead make use of
+<a href="https://jitpack.io/">jitpack.io</a> to obtain a build direct from the source release itself. Refer to <a href="https://jitpack.io/#soundcloud/prometheus-hystrix">https://jitpack.io/#soundcloud/prometheus-hystrix</a> for more information.</p>
+<p>In Gradle, the dependency requirements are:</p>
+<pre><code>compile group: 'com.github.soundcloud', name: 'prometheus-hystrix', version: '3.1.0'
+compile group: 'com.netflix.hystrix', name: 'hystrix-rx-netty-metrics-stream', version: '1.5.8'
+</code></pre><p>In order to expose Hystrix metrics in the Prometheus format, we need to write a little bit of code:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> io.netty.buffer.ByteBuf<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.buffer.ByteBufOutputStream<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.buffer.Unpooled<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.handler.codec.http.HttpHeaderNames<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.netty.handler.codec.http.HttpResponseStatus<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.prometheus.client.CollectorRegistry<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.prometheus.client.exporter.common.TextFormat<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> io.reactivex.netty.protocol.http.server.HttpServerResponse<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> rx.Observable<span style="color:#f92672">;</span>
+
+<span style="color:#f92672">import</span> java.io.BufferedWriter<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> java.io.IOException<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> java.io.OutputStreamWriter<span style="color:#f92672">;</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrometheusMetrics</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Observable<span style="color:#f92672">&lt;</span>Void<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">dumpMetrics</span><span style="color:#f92672">(</span>HttpServerResponse<span style="color:#f92672">&lt;</span>ByteBuf<span style="color:#f92672">&gt;</span> response<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        ByteBuf buffer <span style="color:#f92672">=</span> Unpooled<span style="color:#f92672">.</span><span style="color:#a6e22e">buffer</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">try</span> <span style="color:#f92672">(</span>BufferedWriter bufWriter <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> BufferedWriter<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> OutputStreamWriter<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> ByteBufOutputStream<span style="color:#f92672">(</span>buffer<span style="color:#f92672">))))</span> <span style="color:#f92672">{</span>
+            TextFormat<span style="color:#f92672">.</span><span style="color:#a6e22e">write004</span><span style="color:#f92672">(</span>bufWriter<span style="color:#f92672">,</span> CollectorRegistry<span style="color:#f92672">.</span><span style="color:#a6e22e">defaultRegistry</span><span style="color:#f92672">.</span><span style="color:#a6e22e">metricFamilySamples</span><span style="color:#f92672">());</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>IOException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            response<span style="color:#f92672">.</span><span style="color:#a6e22e">setStatus</span><span style="color:#f92672">(</span>HttpResponseStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">INTERNAL_SERVER_ERROR</span><span style="color:#f92672">);</span>
+            <span style="color:#66d9ef">return</span> response<span style="color:#f92672">.</span><span style="color:#a6e22e">writeStringAndFlush</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ERROR&#34;</span><span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+
+        response<span style="color:#f92672">.</span><span style="color:#a6e22e">setStatus</span><span style="color:#f92672">(</span>HttpResponseStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">OK</span><span style="color:#f92672">);</span>
+        response<span style="color:#f92672">.</span><span style="color:#a6e22e">getHeaders</span><span style="color:#f92672">().</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(</span>HttpHeaderNames<span style="color:#f92672">.</span><span style="color:#a6e22e">CONTENT_TYPE</span><span style="color:#f92672">,</span> TextFormat<span style="color:#f92672">.</span><span style="color:#a6e22e">CONTENT_TYPE_004</span><span style="color:#f92672">);</span>
+        <span style="color:#66d9ef">return</span> response<span style="color:#f92672">.</span><span style="color:#a6e22e">writeAndFlush</span><span style="color:#f92672">(</span>buffer<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Then, we can write a RxNetty server handler to expose both the Hystrix Dashboard stream and the Prometheus stream as follows:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MetricsEndpoint</span> <span style="color:#f92672">{</span>
+	<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> METRICS_PORT <span style="color:#f92672">=</span> 5555<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> HttpServer<span style="color:#f92672">&lt;</span>ByteBuf<span style="color:#f92672">,</span> ByteBuf<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">start</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> RxNetty<span style="color:#f92672">.</span><span style="color:#a6e22e">createHttpServer</span><span style="color:#f92672">(</span>METRICS_PORT<span style="color:#f92672">,</span>
+                                        <span style="color:#66d9ef">new</span> HystrixMetricsStreamHandler<span style="color:#f92672">&lt;&gt;(</span><span style="color:#66d9ef">new</span> MonitorHandler<span style="color:#f92672">())).</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+	<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MonitorHandler</span> <span style="color:#66d9ef">implements</span> RequestHandler<span style="color:#f92672">&lt;</span>ByteBuf<span style="color:#f92672">,</span> ByteBuf<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    	<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String METRICS_PATH <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/metrics&#34;</span><span style="color:#f92672">;</span>
+
+    	<span style="color:#a6e22e">@Override</span>
+    	<span style="color:#66d9ef">public</span> Observable<span style="color:#f92672">&lt;</span>Void<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">handle</span><span style="color:#f92672">(</span>HttpServerRequest<span style="color:#f92672">&lt;</span>ByteBuf<span style="color:#f92672">&gt;</span> request<span style="color:#f92672">,</span> HttpServerResponse<span style="color:#f92672">&lt;</span>ByteBuf<span style="color:#f92672">&gt;</span> response<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        	<span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>request<span style="color:#f92672">.</span><span style="color:#a6e22e">getPath</span><span style="color:#f92672">().</span><span style="color:#a6e22e">startsWith</span><span style="color:#f92672">(</span>METRICS_PATH<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+            	<span style="color:#66d9ef">return</span> PrometheusMetrics<span style="color:#f92672">.</span><span style="color:#a6e22e">dumpMetrics</span><span style="color:#f92672">(</span>response<span style="color:#f92672">);</span>
+        	<span style="color:#f92672">}</span>
+
+        	response<span style="color:#f92672">.</span><span style="color:#a6e22e">setStatus</span><span style="color:#f92672">(</span>HttpResponseStatus<span style="color:#f92672">.</span><span style="color:#a6e22e">BAD_REQUEST</span><span style="color:#f92672">);</span>
+        	<span style="color:#66d9ef">return</span> response<span style="color:#f92672">.</span><span style="color:#a6e22e">writeStringAndFlush</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BAD REQUEST&#34;</span><span style="color:#f92672">);</span>
+    	<span style="color:#f92672">}</span>
+	<span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Now once the server is started, the Hystrix Dashboard can be pointed to <code>&lt;server_address&gt;:5555</code> for the live graphs and
+the Prometheus scraper can obtain the metrics via <code>&lt;server_address&gt;:5555/metrics</code> as well.</p>
+
+    </div>
+    <div class="post-footer">
+      
+    </div>
+  </article>
+
+    </main>
+  </body>
+</html>

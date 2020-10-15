@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>gRPC on Ultracrepidarian</title>
+    <link>/tags/grpc/</link>
+    <description>Recent content in gRPC on Ultracrepidarian</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sun, 26 Mar 2017 14:23:24 +0100</lastBuildDate><atom:link href="/tags/grpc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tracing gRPC Services</title>
+      <link>/posts/tracing-grpc-services/</link>
+      <pubDate>Sun, 26 Mar 2017 14:23:24 +0100</pubDate>
+      
+      <guid>/posts/tracing-grpc-services/</guid>
+      <description>Built-in tracing with x/net/trace The grpc package contains a variable named EnableTracing that is set to true by default. When tracing is enabled, all requests and responses are recorded internally by the grpc library using the trace functions provided by the x/net/trace package. This package registers two HTTP handlers in http.DefaultServeMux to serve trace information at /debug/events and /debug/requests paths by default. Alternatively, trace.Render(...) and trace.RenderEvents(...) can be used in your own HTTP handlers to produce the same output.</description>
+    </item>
+    
+    <item>
+      <title>Protocol Buffers and gRPC Tips for Go</title>
+      <link>/posts/go-grpc/</link>
+      <pubDate>Wed, 15 Mar 2017 20:28:43 +0100</pubDate>
+      
+      <guid>/posts/go-grpc/</guid>
+      <description>This is a brain dump of tools and code snippets that come in handy when implementing gRPC services or using protobufs with Go.
+Libraries And Utilities cat &amp;lt;&amp;lt;EOF | xargs go get -u github.com/golang/protobuf/proto github.com/golang/protobuf/protoc-gen-go google.golang.org/grpc github.com/gogo/protobuf/proto github.com/gogo/protobuf/jsonpb github.com/gogo/protobuf/protoc-gen-gogofast github.com/gogo/protobuf/gogoproto go.pedge.io/protoeasy/cmd/protoeasy github.com/mwitkow/go-grpc-middleware github.com/grpc-ecosystem/go-grpc-prometheus EOF Gogoproto GogoProto is a fork of protobuf with additional goodies such as faster marshalers, utility method generators and best of all, test and benchmark generators for the message definitions.</description>
+    </item>
+    
+    <item>
+      <title>gRPC pool for groupcache</title>
+      <link>/posts/gcgrpcpool/</link>
+      <pubDate>Wed, 20 Jul 2016 19:20:23 +0100</pubDate>
+      
+      <guid>/posts/gcgrpcpool/</guid>
+      <description>Groupcache is a system first written at Google to provide a caching layer for the dl.google.com service. It uses consistent hashing to distribute the key space over a group of machines. Each node is able to answer queries by first checking its&#39; own cache or by forwarding the request to a peer that could have it cached. To avoid the thundering herd problem when there&amp;rsquo;s a cache miss, only one request is allowed to read-through to the backend service.</description>
+    </item>
+    
+  </channel>
+</rss>

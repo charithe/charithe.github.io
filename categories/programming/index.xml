@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Programming on Ultracrepidarian</title>
+    <link>/categories/programming/</link>
+    <description>Recent content in Programming on Ultracrepidarian</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sun, 26 Mar 2017 14:23:24 +0100</lastBuildDate><atom:link href="/categories/programming/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tracing gRPC Services</title>
+      <link>/posts/tracing-grpc-services/</link>
+      <pubDate>Sun, 26 Mar 2017 14:23:24 +0100</pubDate>
+      
+      <guid>/posts/tracing-grpc-services/</guid>
+      <description>Built-in tracing with x/net/trace The grpc package contains a variable named EnableTracing that is set to true by default. When tracing is enabled, all requests and responses are recorded internally by the grpc library using the trace functions provided by the x/net/trace package. This package registers two HTTP handlers in http.DefaultServeMux to serve trace information at /debug/events and /debug/requests paths by default. Alternatively, trace.Render(...) and trace.RenderEvents(...) can be used in your own HTTP handlers to produce the same output.</description>
+    </item>
+    
+    <item>
+      <title>Protocol Buffers and gRPC Tips for Go</title>
+      <link>/posts/go-grpc/</link>
+      <pubDate>Wed, 15 Mar 2017 20:28:43 +0100</pubDate>
+      
+      <guid>/posts/go-grpc/</guid>
+      <description>This is a brain dump of tools and code snippets that come in handy when implementing gRPC services or using protobufs with Go.
+Libraries And Utilities cat &amp;lt;&amp;lt;EOF | xargs go get -u github.com/golang/protobuf/proto github.com/golang/protobuf/protoc-gen-go google.golang.org/grpc github.com/gogo/protobuf/proto github.com/gogo/protobuf/jsonpb github.com/gogo/protobuf/protoc-gen-gogofast github.com/gogo/protobuf/gogoproto go.pedge.io/protoeasy/cmd/protoeasy github.com/mwitkow/go-grpc-middleware github.com/grpc-ecosystem/go-grpc-prometheus EOF Gogoproto GogoProto is a fork of protobuf with additional goodies such as faster marshalers, utility method generators and best of all, test and benchmark generators for the message definitions.</description>
+    </item>
+    
+    <item>
+      <title>Integrating Hystrix And Exposing Metrics To Prometheus</title>
+      <link>/posts/hystrix-prom/</link>
+      <pubDate>Mon, 09 Jan 2017 18:08:22 +0100</pubDate>
+      
+      <guid>/posts/hystrix-prom/</guid>
+      <description>Hystrix is a well-known fault tolerance library for distributed systems. If your application needs to interact with remote systems (or even micro-services running in the same data center), Hystrix will provide latency-sensitive routing, retries, request coalescing, circuit breakers and many more fault-tolerance features out of the box. I cannot do much justice to Hystrix in this short brain dump but there are many great articles and presentations around the web that are well worth perusing.</description>
+    </item>
+    
+    <item>
+      <title>gRPC pool for groupcache</title>
+      <link>/posts/gcgrpcpool/</link>
+      <pubDate>Wed, 20 Jul 2016 19:20:23 +0100</pubDate>
+      
+      <guid>/posts/gcgrpcpool/</guid>
+      <description>Groupcache is a system first written at Google to provide a caching layer for the dl.google.com service. It uses consistent hashing to distribute the key space over a group of machines. Each node is able to answer queries by first checking its&#39; own cache or by forwarding the request to a peer that could have it cached. To avoid the thundering herd problem when there&amp;rsquo;s a cache miss, only one request is allowed to read-through to the backend service.</description>
+    </item>
+    
+    <item>
+      <title>Akka Cluster On Kubernetes</title>
+      <link>/posts/kubernetes-akka-cluster/</link>
+      <pubDate>Tue, 17 May 2016 21:10:23 +0100</pubDate>
+      
+      <guid>/posts/kubernetes-akka-cluster/</guid>
+      <description>One of the challenges of running an Akka cluster application is the bootstrapping step required to discover other nodes in the cluster. This post illustrates how to make use of Kubernetes headless services to deploy an Akka cluster that automatically discovers its peers.
+Normally, Kubernetes services resolve to a single IP address belonging to one of the child containers that match the selection criteria. A headless service, on the other hand, return a list of all the IP addresses that are under its watch.</description>
+    </item>
+    
+    <item>
+      <title>Dynamic Akka Streams Using Stage Actors</title>
+      <link>/posts/dynamic-akka-streams/</link>
+      <pubDate>Sun, 15 May 2016 17:20:34 +0100</pubDate>
+      
+      <guid>/posts/dynamic-akka-streams/</guid>
+      <description>Most stream processing frameworks require the implementer to define the processing logic using some sort of a DSL &amp;ndash; which then gets compiled and materialised into the framework&amp;rsquo;s primitives at run time. The user has very little control over the pipeline once it starts executing. Any changes to the processing stages requires a re-compilation and a re-deployment. Getting around this limitation is not impossible but requires inelegant and costly operations such as polling an external service or a data store for updates.</description>
+    </item>
+    
+  </channel>
+</rss>

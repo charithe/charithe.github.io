@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en-gb">
+  <head>
+    <title>Akka Cluster On Kubernetes // Ultracrepidarian</title>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Hugo 0.76.5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Charith Ellawala" />
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="/css/main.min.88e7083eff65effb7485b6e6f38d10afbec25093a6fac42d734ce9024d3defbd.css" />
+
+    
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Akka Cluster On Kubernetes"/>
+<meta name="twitter:description" content="One of the challenges of running an Akka cluster application is the bootstrapping step required to discover other nodes in the cluster. This post illustrates how to make use of Kubernetes headless services to deploy an Akka cluster that automatically discovers its peers.
+Normally, Kubernetes services resolve to a single IP address belonging to one of the child containers that match the selection criteria. A headless service, on the other hand, return a list of all the IP addresses that are under its watch."/>
+
+    <meta property="og:title" content="Akka Cluster On Kubernetes" />
+<meta property="og:description" content="One of the challenges of running an Akka cluster application is the bootstrapping step required to discover other nodes in the cluster. This post illustrates how to make use of Kubernetes headless services to deploy an Akka cluster that automatically discovers its peers.
+Normally, Kubernetes services resolve to a single IP address belonging to one of the child containers that match the selection criteria. A headless service, on the other hand, return a list of all the IP addresses that are under its watch." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/posts/kubernetes-akka-cluster/" />
+<meta property="article:published_time" content="2016-05-17T21:10:23+01:00" />
+<meta property="article:modified_time" content="2016-05-17T21:10:23+01:00" />
+
+
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="/"><img class="app-header-avatar" src="/images/profile_pic.jpg" alt="Charith Ellawala" /></a>
+      <h1>Ultracrepidarian</h1>
+      <nav class="app-header-menu">
+          <a class="app-header-menu-item" href="/">Home</a>
+             | 
+          
+          <a class="app-header-menu-item" href="/tags/">Tags</a>
+      </nav>
+      <p>Musings</p>
+      <div class="app-header-social">
+        
+          <a target="_blank" href="https://github.com/charithe" rel="noreferrer noopener"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-github">
+  <title>github</title>
+  <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+</svg></a>
+        
+      </div>
+    </header>
+    <main class="app-container">
+      
+  <article class="post">
+    <header class="post-header">
+      <h1 class ="post-title">Akka Cluster On Kubernetes</h1>
+      <div class="post-meta">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-calendar">
+  <title>calendar</title>
+  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+</svg>
+          May 17, 2016
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-clock">
+  <title>clock</title>
+  <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+</svg>
+          2 min read
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
+  <title>tag</title>
+  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line>
+</svg>
+              <a class="tag" href="/tags/akka/">akka</a>
+              <a class="tag" href="/tags/actors/">actors</a>
+              <a class="tag" href="/tags/scala/">scala</a>
+              <a class="tag" href="/tags/kubernetes/">kubernetes</a>
+        </div>
+      </div>
+    </header>
+    <div class="post-content">
+      <ul>
+<li></li>
+</ul>
+<p>One of the challenges of running an Akka cluster application is the bootstrapping step required to discover other nodes in the cluster. This post illustrates how to make use of Kubernetes headless services to deploy an Akka cluster that automatically discovers its peers.</p>
+<p>Normally, Kubernetes services resolve to a single IP address belonging to one of the child containers that match the selection criteria. A headless service, on the other hand, return a list of all the IP addresses that are under its watch. This is achieved by setting the <code>clusterIP</code> field to <code>None</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+<span style="color:#f92672">metadata</span>:
+    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">discovery-svc</span>
+    <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">name</span>: <span style="color:#ae81ff">discovery-svc</span>
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">my-akka-app</span>
+<span style="color:#f92672">spec</span>:
+    <span style="color:#f92672">clusterIP</span>: <span style="color:#ae81ff">None</span>
+    <span style="color:#f92672">ports</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">discovery-port</span>
+          <span style="color:#f92672">port</span>: <span style="color:#ae81ff">2600</span>
+    <span style="color:#f92672">selector</span>:
+        <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-node</span>
+</code></pre></div><p>Next we define a deployment spec for the cluster application itself. The following spec sets the initial cluster size to three nodes. The crucial bit is the definition of an environment variable named <code>DISCOVERY_SERVICE</code> which is set to the value of the Kubernetes cluster DNS entry for the service we defined earlier  (on Google Container Engine this is usually the name of the service followed by <code>default.svc.cluster.local</code>). Please note that typically service information is exposed by Kubernetes as environment variables of the form <code>&lt;normalised_service_name&gt;_SERVICE_HOST</code> and <code>&lt;normalised_service_name&gt;_SERVICE_PORT</code> (in this example, the variables would be <code>DISCOVERY_SVC_SERVICE_HOST</code> and <code>DISCOVERY_SVC_SERVICE_PORT</code>). However, I had trouble accessing these variables from within my containers &ndash; hence the need to define an explicit variable with the hard-coded service DNS entry.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">extensions/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+<span style="color:#f92672">metadata</span>:
+    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-dep</span>
+    <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-dep</span>
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">my-akka-app</span>
+<span style="color:#f92672">spec</span>:
+    <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">3</span>
+    <span style="color:#f92672">template</span>:
+        <span style="color:#f92672">metadata</span>:
+            <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-node</span>
+            <span style="color:#f92672">labels</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-node</span>
+                <span style="color:#f92672">app</span>: <span style="color:#ae81ff">my-akka-app</span>
+        <span style="color:#f92672">spec</span>:
+            <span style="color:#f92672">terminationGracePeriodSeconds</span>: <span style="color:#ae81ff">60</span>
+            <span style="color:#f92672">containers</span>:
+                - <span style="color:#f92672">image</span>: <span style="color:#ae81ff">my-docker-registry.com/my-akka-app:1.0</span>
+                  <span style="color:#f92672">imagePullPolicy</span>: <span style="color:#ae81ff">Always</span>
+                  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-node</span>
+                  <span style="color:#f92672">ports</span>:
+                    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cluster-port</span>
+                      <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">2600</span>
+                  <span style="color:#f92672">env</span>:
+                    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DISCOVERY_SERVICE</span>
+                      <span style="color:#f92672">value</span>: <span style="color:#ae81ff">discovery-svc.default.svc.cluster.local</span>
+                  <span style="color:#f92672">livenessProbe</span>:
+                    <span style="color:#f92672">tcpSocket</span>:
+                      <span style="color:#f92672">port</span>: <span style="color:#ae81ff">2600</span>
+                    <span style="color:#f92672">initialDelaySeconds</span>: <span style="color:#ae81ff">15</span>
+                    <span style="color:#f92672">timeoutSeconds</span>: <span style="color:#ae81ff">2</span>
+</code></pre></div><p>In order for the discovery to work, we need to bootstrap the application as follows:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">def</span> main<span style="color:#f92672">(</span>args<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">val</span> conf <span style="color:#66d9ef">=</span> resolveConfig<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;MyCluster&#34;</span><span style="color:#f92672">,</span> <span style="color:#ae81ff">2600</span><span style="color:#f92672">)</span>
+  <span style="color:#66d9ef">val</span> actorSystem <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ActorSystem</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;MyCluster&#34;</span><span style="color:#f92672">,</span> conf<span style="color:#f92672">)</span>
+  <span style="color:#75715e">// rest of the init code
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">def</span> resolveConfig<span style="color:#f92672">(</span>actorSystemName<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> port<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Config</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">val</span> hostAddress <span style="color:#66d9ef">=</span> getHostAddress
+  <span style="color:#66d9ef">val</span> seedNodes <span style="color:#66d9ef">=</span> getSeedNodes<span style="color:#f92672">(</span>hostAddress<span style="color:#f92672">,</span> port<span style="color:#f92672">)</span>
+
+  <span style="color:#a6e22e">ConfigFactory</span><span style="color:#f92672">.</span>empty<span style="color:#f92672">()</span>
+    <span style="color:#f92672">.</span>withValue<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;akka.cluster.seed-nodes&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ConfigValueFactory</span><span style="color:#f92672">.</span>fromIterable<span style="color:#f92672">(</span>seedNodes<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>node <span style="color:#66d9ef">=&gt;</span> <span style="color:#e6db74">s&#34;akka.tcp://</span><span style="color:#e6db74">${</span>actorSystemName<span style="color:#e6db74">}</span><span style="color:#e6db74">@</span><span style="color:#e6db74">$node</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">)))</span>
+    <span style="color:#f92672">.</span>withValue<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;akka.remote.netty.tcp.hostname&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ConfigValueFactory</span><span style="color:#f92672">.</span>fromAnyRef<span style="color:#f92672">(</span>hostAddress<span style="color:#f92672">))</span>
+    <span style="color:#f92672">.</span>withValue<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;akka.remote.netty.tcp.port&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ConfigValueFactory</span><span style="color:#f92672">.</span>fromAnyRef<span style="color:#f92672">(</span>port<span style="color:#f92672">))</span>
+    <span style="color:#f92672">.</span>withFallback<span style="color:#f92672">(</span><span style="color:#a6e22e">ConfigFactory</span><span style="color:#f92672">.</span>load<span style="color:#f92672">())</span>
+    <span style="color:#f92672">.</span>resolve<span style="color:#f92672">()</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">def</span> getSeedNodes<span style="color:#f92672">(</span>hostAddress<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> port<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// try to resolve the list of IP addresses from the discovery service or return local address
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> seedNodes <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Option</span><span style="color:#f92672">(</span><span style="color:#a6e22e">System</span><span style="color:#f92672">.</span>getenv<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;DISCOVERY_SERVICE&#34;</span><span style="color:#f92672">)).</span>fold<span style="color:#f92672">(</span><span style="color:#a6e22e">Seq</span><span style="color:#f92672">.</span>empty<span style="color:#f92672">)(</span><span style="color:#a6e22e">InetAddress</span><span style="color:#f92672">.</span>getAllByName<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">).</span>map<span style="color:#f92672">(</span>addr <span style="color:#66d9ef">=&gt;</span> <span style="color:#e6db74">s&#34;</span><span style="color:#e6db74">${</span>addr<span style="color:#f92672">.</span>getHostAddress<span style="color:#e6db74">}</span><span style="color:#e6db74">:</span><span style="color:#e6db74">$port</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">))</span>
+    <span style="color:#66d9ef">if</span><span style="color:#f92672">(</span>seedNodes<span style="color:#f92672">.</span>isEmpty<span style="color:#f92672">){</span>
+      <span style="color:#a6e22e">Seq</span><span style="color:#f92672">(</span><span style="color:#e6db74">s&#34;</span><span style="color:#e6db74">$hostAddress</span><span style="color:#e6db74">:</span><span style="color:#e6db74">$port</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+      seedNodes
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">def</span> getHostAddress<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#a6e22e">NetworkInterface</span><span style="color:#f92672">.</span>getNetworkInterfaces
+    <span style="color:#f92672">.</span>find<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>getName equals <span style="color:#e6db74">&#34;eth0&#34;</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>flatMap <span style="color:#f92672">{</span> interface <span style="color:#66d9ef">=&gt;</span>
+      interface<span style="color:#f92672">.</span>getInetAddresses<span style="color:#f92672">.</span>find<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>isSiteLocalAddress<span style="color:#f92672">).</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>getHostAddress<span style="color:#f92672">)</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#f92672">.</span>getOrElse<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;127.0.0.1&#34;</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>
+</code></pre></div>
+    </div>
+    <div class="post-footer">
+      
+    </div>
+  </article>
+
+    </main>
+  </body>
+</html>

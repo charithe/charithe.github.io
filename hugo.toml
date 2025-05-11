@@ -6,6 +6,9 @@ title = "Cell's notes"
 github = 'charithe'
 name = 'Charith Ellawala'
 
+[caches]
+[caches.images]
+dir = ':cacheDir/images'
 
 [module]
 [[module.imports]]
